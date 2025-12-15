@@ -220,7 +220,23 @@ def object_read(repo, sha):
             case b'tag'    : c=GitTag
             case b'blob'   : c=GitBlob
             case _:
-                raise Exception(f"Unknown type {fmt.decode("ascii")} for object {sha}")
+                raise Exception(f"Unknown type {fmt.decode('ascii')} for object {sha}")
 
         # Call constructor and return object
         return c(raw[y+1:])
+
+def object_write(obj, repo=None):
+    # Serialize object data
+    data = obj.serialize()
+    # Add header
+    result = obj.fmt + b" " + str(len(data)).encode() + b"\x00" + data
+    # Compute hash
+    sha = hashlib.sha1(result).hexdigest()
+
+    if repo:
+        path = repo_file(repo, "objects", sha[0:2], sha[2:], mkdir=True)
+        if not os.path.exists(path):
+            with open(path, "wb") as f:
+                f.write(zlib.compress(result))
+    return sha
+    
